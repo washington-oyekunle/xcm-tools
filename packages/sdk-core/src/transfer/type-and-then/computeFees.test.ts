@@ -182,6 +182,26 @@ describe('computeAllFees', () => {
     expect(isAssetEqual).toHaveBeenCalledWith(context.assetInfo, context.assetInfo)
   })
 
+  it('does not add the destination existential deposit twice', async () => {
+    const feeDetail: TXcmFeeDetail = {
+      fee: 0n,
+      feeType: 'dryRun',
+      asset: context.assetInfo
+    }
+
+    vi.mocked(getXcmFeeInternal).mockResolvedValue({
+      success: true,
+      origin: feeDetail,
+      destination: { ...feeDetail, fee: 1_500n },
+      hops: []
+    })
+
+    const result = await computeAllFees({ ...context, edDeposit: 500n }, buildTx)
+
+    expect(result).toEqual({ hopFees: 0n, destFee: 1_500n })
+    expect(padValueBy).toHaveBeenNthCalledWith(2, 1_500n, FEE_PADDING)
+  })
+
   it('sums hop fees by the user-defined fee asset when provided', async () => {
     const feeAssetInfo = {
       symbol: 'USDT',
